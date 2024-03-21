@@ -1,6 +1,6 @@
 # Associations Beyond Chance
 
-This repository provides code linked to the paper [*"Multimorbidity analysis with low condition counts: a robust Bayesian approach for small but important subgroups"*](https://authors.elsevier.com/sd/article/S2352396424001166).
+This repository provides code linked to the paper [*"Multimorbidity analysis with low condition counts: a robust Bayesian approach for small but important subgroups"*](https://authors.elsevier.com/sd/article/S2352396424001166). If you use this code, please cite the paper.
 
 While the code is in *python*, Bayesian inference is performed via [Stan](http://mc-stan.org) through the package `cmdstanpy`, providing a python API to the *Stan* library.
 
@@ -9,14 +9,20 @@ While the code is in *python*, Bayesian inference is performed via [Stan](http:/
 
 ## Packages
 
-- numpy
-- scipy
-- pandas
-- networkx
-- cmdstanpy (pystan)
-- matplotlib
-- seaborn
-- bokeh
+For running the model, you will need the following packages:
+
+- numpy = 1.22.3
+- scipy = 1.8.0
+- pandas = 1.4.2
+- cmdstanpy = 1.1.0 (pystan = 3.2.0)
+- matplotlib = 3.5.1
+- seaborn = 0.13.1
+
+
+For obtaining results, you will additionally need the following packages:
+
+- networkx = 2.8
+- bokeh = 3.3.0
 
 
 ## Using the model
@@ -32,6 +38,8 @@ results = model.get_results_dataframe(pvalue=0.01)
 ```
 
 where `data` is a `pandas.DataFrame` object containing your dataset in **long format** --- i.e. with patients as rows, columns as variables, and binary values (diagnosis present / absent).
+
+The model is defined in the file `models/MLTC_atomic_hyp_mult.stan`.
 
 
 ## Reproducing results
