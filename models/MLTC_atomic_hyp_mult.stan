@@ -25,15 +25,15 @@ model {
   alpha_beta_prior - 1 ~ exponential(0.01);
   beta_beta_prior - 1 ~ exponential(0.01);
   for (i in 1:n) {
-    sigma[i] ~ beta(alpha_beta_prior, beta_beta_prior); // T[ , upper_sigma[i]];
+    sigma[i] ~ beta(alpha_beta_prior, beta_beta_prior);
   }
   
   mu_lognormal_prior ~ normal(0, 1);
   std_lognormal_prior ~ exponential(1);
   for (i in 1:n) {
     for (j in i + 1:n) {
-      // r[i,j] + 1 ~ lognormal(mu_lognormal_prior, std_lognormal_prior); //T[ , upper_r[i,j]];
-      r[i,j] + 1 ~ lognormal(0, std_lognormal_prior); //T[ , upper_r[i,j]];
+      // r[i,j] + 1 ~ lognormal(mu_lognormal_prior, std_lognormal_prior);
+      r[i,j] + 1 ~ lognormal(0, std_lognormal_prior);
       
       // Likelihood
       real mu_11 = sigma[i] * sigma[j] * (1 + r[i,j] * (1 - sigma[i] * sigma[j]));
@@ -63,8 +63,6 @@ generated quantities {
   array[n,n] real r_priors;
   array[n,n] real rate_X_prior;
   array[n,n] real rate_X_post;
-  // array[n,n] int X_prior;
-  // array[n,n] int P_prior;
   
   array[n,n] int X_post;
   array[n,n] int P_post;
@@ -73,9 +71,6 @@ generated quantities {
       r_priors[i,j] = - 1 + lognormal_rng(mu_prior, std_prior);
   
       rate_X_prior[i,j] = sigma_priors[i] * sigma_priors[j] * (1 + r_priors[i,j] * (1 - sigma_priors[i] * sigma_priors[j]));
-      // X_prior[i,j] = binomial_rng(M, rate_X_prior[i,j]);
-      // P_prior[i,j] = binomial_rng(M, sigma_priors[i] * (1 + sigma_priors[j] * r_priors[i,j] * (1 - sigma_priors[i])));
-      // P_prior[j,i] = binomial_rng(M, sigma_priors[j] * (1 + sigma_priors[i] * r_priors[i,j] * (1 - sigma_priors[j])));
 
       real mu_11 = sigma[i] * sigma[j] * (1 + r[i,j] * (1 - sigma[i] * sigma[j]));
       real mu_10 = sigma[i] * (1 - sigma[j]) * (1 - sigma[i] * sigma[j] * r[i,j]);
@@ -89,4 +84,4 @@ generated quantities {
       P_post[j,i] = y[3] + y[1];
     }
   }
-} //
+}

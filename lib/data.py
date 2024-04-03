@@ -26,8 +26,8 @@ def load_dataset(morb_cols=None, **read_csv_kwargs):
 
     :param morb_cols: list with the column names of the dataset containing condition diagnoses.
     :param read_csv_kwargs: kwargs for the `pd.read_csv` function.
-    :return: a pandas dataframe with the dataset in long-form and a list with the names of the columns related to
-    diagnoses of conditions
+    :return: data (pd.DataFrame with the dataset in long-form), morb_names (a list with the names of the columns related
+     to diagnoses of conditions)
     """
 
     print("Loading dataset...")
@@ -76,7 +76,8 @@ def stratify_dataset(data, stratification_variable):
         fnames = [fname + f"-{i}" for i in range(len(labels))]
     elif stratification_variable in ("Age-Sex", "Age-Sex85"):
         masks = [
-            [(data["Age"] >= age_groups[i]) & (data["Age"] < age_groups[i + 1]) & (data["Sex"] == j) for j in (0, 1)]
+            [(data["Age"] >= age_groups[i]) & (data["Age"] < age_groups[i + 1]) & (data["Sex"] == j) for j in
+             ("Men", "Women")]
             for i in range(len(age_groups) - 1)]
         masks = [m for l in masks for m in l]
         labels = [[f"{label} ({label_s})" for label_s in sex_labels] for label in age_labels]
@@ -91,7 +92,15 @@ def stratify_dataset(data, stratification_variable):
     return dfs, labels, fnames
 
 
-def beautify_name(name, sep=" ", short=False):
+def beautify_name(name: str, sep: str = " ", short: bool = False) -> str:
+    """
+    Function to beautify names of LTCs for tables and figures.
+    
+    :param name: name to be beautified
+    :param sep: separator to use between words
+    :param short: for a shorter version of the names, useful in figures
+    :return: beautified name
+    """
     beautify_dict = {
         "ActiveAsthma": "Asthma (currently treated)",
         "CHD": "Coronary heart disease (CHD)" if not short else "Coronary heart disease",
@@ -115,25 +124,18 @@ def beautify_name(name, sep=" ", short=False):
         "ViralHepatitis": "Viral Hepatitis",
     }
 
-    # For nodes in network
-    # beautify_dict.update({"AnyCancer_Last5Yrs": "Any Cancer\nLast 5 Years",
-    #                       "ChronicLiverDisease": "Chronic Liver\nDisease",
-    #                       "PeripheralVascularDisease": "Peripheral Vascular\nDisease",
-    #                       "RheumatoidArthritisEtc": "Rheumaotid\nArthritis",
-    #                       "IrritableBowelSyndrome": "IBS", })
-
-    if name in beautify_dict:
-        return beautify_dict[name]
-    else:
-        return sep.join(
-            [word if i == 0 else word.lower() for i, word in enumerate(re.findall('[A-Z]+[a-z]*|\d+', name))])
+    return beautify_dict.get(name, sep.join(
+        [word if i == 0 else word.lower() for i, word in enumerate(re.findall('[A-Z]+[a-z]*|\d+', name))]))
 
 
-def beautify_names(a_list_of_names, sep=" ", short=False):
-    return [beautify_name(name, sep=sep, short=short) for name in a_list_of_names]
+def beautify_index(table: pd.DataFrame, **beautify_name_kwargs) -> pd.DataFrame:
+    """
+    Takes a table with index as name pairs separated by a dash and beautify each name of the pair.
 
-
-def beautify_index(table, **beautify_name_kwargs):
+    :param table: table with index as name pairs separated by a dash and beautify each name of the pair
+    :param beautify_name_kwargs: additional keyword arguments to pass to the `beautify_name` function
+    :return: table with the index as *beautified* name pairs, still separated by a dash
+    """
     table.index = [" - ".join([beautify_name(nam, **beautify_name_kwargs) for nam in re.findall('[^-]+', name)]) for
                    name in list(table.index)]
     return table

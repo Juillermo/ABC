@@ -2,6 +2,20 @@
 
 This repository provides code linked to the paper [*"Multimorbidity analysis with low condition counts: a robust Bayesian approach for small but important subgroups"*](https://authors.elsevier.com/sd/article/S2352396424001166). If you use this code, please cite the paper.
 
+```
+@article{ROMEROMORENO2024105081,
+title = {Multimorbidity analysis with low condition counts: a robust Bayesian approach for small but important subgroups},
+journal = {eBioMedicine},
+volume = {102},
+pages = {105081},
+year = {2024},
+issn = {2352-3964},
+doi = {https://doi.org/10.1016/j.ebiom.2024.105081},
+url = {https://www.sciencedirect.com/science/article/pii/S2352396424001166},
+author = {Guillermo {Romero Moreno} and Valerio Restocchi and Jacques D. Fleuriot and Atul Anand and Stewart W. Mercer and Bruce Guthrie},
+}
+```
+
 While the code is in *python*, Bayesian inference is performed via [Stan](http://mc-stan.org) through the package `cmdstanpy`, providing a python API to the *Stan* library.
 
 ![](1-s2.0-S2352396424001166-gr4_lrg.jpg)

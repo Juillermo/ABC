@@ -11,6 +11,7 @@ import time
 import itertools
 
 import numpy as np
+import pandas as pd
 import scipy as sp
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -19,9 +20,32 @@ THIS_DIR = osp.dirname(osp.realpath(__file__))
 PROJECT_DIR = osp.abspath(osp.join(THIS_DIR, os.pardir))
 
 
-def plot_comorbidities(mat, names, title="", cbar_label="", sym=False, ax: plt.Axes = None, row=None, log=False,
-                       vmin=None, vmax=None, cbar: bool = True, norm_kwargs={}, boundaries=None, cbar_ticklabels=None,
-                       cbar_kwargs={}, bubbles=False, bubble_area_multiplier=30, **im_kwargs):
+def plot_pairwise_relations(mat, names, title="", cbar_label="", sym=False, ax: plt.Axes = None, row: int = None,
+                            log: bool = False, vmin=None, vmax=None, cbar: bool = True, norm_kwargs: dict = {},
+                            boundaries=None, cbar_ticklabels=None, cbar_kwargs: dict = {}, bubbles: bool = False,
+                            bubble_area_multiplier=30, **im_kwargs):
+    """
+    Plot pairwise statistics in a heatmap / bubble plot format.
+
+    :param mat: square matrix with pairwise relations
+    :param names: (iterable) names of the LTCs
+    :param title: title of the plot
+    :param cbar_label: label for the colorbar (if heatmap plot)
+    :param sym: whether colours are symmetric around zero (if heatmap plot)
+    :param ax: matplotlib axes object to plot on
+    :param row: if given, relations of a single LTC is plotted
+    :param log: whether a logarithmic scale is used (if heatmap plot)
+    :param vmin: (float) lower value cap (if heatmap plot)
+    :param vmax: (float) higher value cap (if heatmap plot)
+    :param cbar: whether the colorbar is plotted (if heatmap plot)
+    :param norm_kwargs: additional keyword arguments to pass to the matplotlib Norm object (if heatmap plot)
+    :param boundaries: (iterable) boundaries of the discrete steps for colurs (if heatmap plot)
+    :param cbar_ticklabels: labels to use for the colorbar (if heatmap plot)
+    :param cbar_kwargs: additional keyword arguments to pass to the `plt.colorbar` function
+    :param bubbles: whether to use a bubble plot instead of a heatmap
+    :param bubble_area_multiplier: (float) multiplier of the value of a pairwise relationship to use as bubble area
+    :param im_kwargs: additional keyword arguments to pass to the `plt.imshow` function (if heatmap plot)
+    """
     if ax is None:
         fig, ax = plt.subplots(figsize=(12, 12 if row is None else 1))
     else:
@@ -30,9 +54,8 @@ def plot_comorbidities(mat, names, title="", cbar_label="", sym=False, ax: plt.A
     if "cmap" not in im_kwargs:
         im_kwargs["cmap"] = plt.cm.Blues if not sym else plt.cm.RdBu
     if "norm" not in im_kwargs:
-        if boundaries is not None:  # https://stackoverflow.com/questions/67158801/how-to-get-proper-tick-labels-for-a-colarbar-with-discrete-logarithmic-steps)
-            # boundaries = np.linspace(0, 2, 6) if L == 3 else np.linspace(0, L - 1, L + 1)
-            ncolors = 256  # len(boundaries) - 1  # 256
+        if boundaries is not None:
+            ncolors = 256
             im_kwargs["norm"] = mpl.colors.BoundaryNorm(boundaries=boundaries, ncolors=ncolors, **norm_kwargs)
         elif log:
             im_kwargs["norm"] = mpl.colors.LogNorm(vmin=vmin, vmax=vmax)
@@ -41,13 +64,7 @@ def plot_comorbidities(mat, names, title="", cbar_label="", sym=False, ax: plt.A
         elif vmin is not None or vmax is not None:
             im_kwargs["norm"] = mpl.colors.Normalize(vmin=vmin, vmax=vmax, **norm_kwargs)
 
-    # if conf_thresh is not None:
-    #     conf_mat = self.extract_confidence_mask(conf_thresh=conf_thresh)
-    #     S = np.ma.array(S, mask=~conf_mat)
-    #     cmap.set_bad('white', 1.)
-
     if not bubbles:
-        # Check [*sns.heatmap*](https://seaborn.pydata.org/generated/seaborn.heatmap.html) for useful heatmap function.
         im = ax.imshow(mat if row is None else mat[None, row], **im_kwargs)
         ax.spines[['right', 'top']].set_visible(False)
 
@@ -61,33 +78,38 @@ def plot_comorbidities(mat, names, title="", cbar_label="", sym=False, ax: plt.A
                 formatter = mpl.ticker.LogFormatter(base=1.6, labelOnlyBase=False)
                 cbar.ax.yaxis.set_major_formatter(formatter)
                 cbar.ax.yaxis.set_ticks([0.3, 0.5, 0.7, 1, 2, 3, 4, 5])
-                # from matplotlib.ticker import LogFormatter
-                # cb = plt.colorbar(ticks=[1, 5, 10, 20, 50], format=LogFormatter(10, labelOnlyBase=False)
                 cbar.ax.set_yticklabels(cbar_ticklabels)
     else:
-        # print((np.log(mat) < 0).sum())
         mat = np.log(mat) if log else mat
 
         N = len(names)
-        # positions = list(itertools.combinations(range(N), 2))
         positions = list(itertools.product(range(N), range(N)))
         x_pos, y_pos = [pos[0] for pos in positions], [N - 1 - pos[1] for pos in positions]
         areas = np.array([np.abs(mat[N - 1 - y, x]) for (x,y) in zip(x_pos,y_pos)]) * bubble_area_multiplier
         colours = ["r" if mat[N - 1 - y, x] < 0 else "b" for (x,y) in zip(x_pos,y_pos)]
-        ax.scatter(x_pos, y_pos, s=areas, c=colours, linewidths=2.5)#, alpha=0.7) # linewidths=2.5
+        ax.scatter(x_pos, y_pos, s=areas, c=colours, linewidths=2.5)
 
         ax.set(xlim=(-0.5, N - 0.5), ylim=(-0.5, N - 0.5))
 
     ax.set(title=title)
     ax.xaxis.set(ticks=range(len(names)), ticklabels=names)
     ax.yaxis.set(ticks=range(len(names)), ticklabels=names if not bubbles else names[::-1]) if row is None else None
-    ax.tick_params(axis='x', labelrotation=90)  # , top=True, labeltop=True, labelbottom=False, bottom=False)
+    ax.tick_params(axis='x', labelrotation=90)
 
     if fig is not None:
         fig.show()
 
 
-def compute_associations(df, columns, link_type="count"):
+def compute_associations(df: pd.DataFrame, columns, assoc_type: str) -> np.ndarray:
+    """
+    Compute pairwise associations between variables using the Salton Cosine Index or the Pearsons's phi-correlation for
+    binary variables.
+
+    :param df: dataframe in 'long format' (i.e. rows as cases and columns as variables).
+    :param columns: (iterable of str) columns for which pairwise associations are computed
+    :param assoc_type: association type. It can be "cosine" (Salton Cosine Index), or "phi" (Pearson's phi-correlation).
+    :return: square matrix containing pairwise associations of the chosen type
+    """
     M = len(columns)
     adjacency = np.zeros((M, M))
     for i, col in enumerate(columns):
@@ -100,42 +122,35 @@ def compute_associations(df, columns, link_type="count"):
             N = len(partition_mask)
             P1, P2 = partition_mask.sum() / N, partition_mask2.sum() / N
             if (P12 := (partition_mask & partition_mask2).sum() / N) > 0:
-                if link_type == "count":
-                    adjacency[i, j] = P12 * N
-                elif link_type == "RR":
-                    adjacency[i, j] = P12 / P1 / P2
-                elif link_type == "cosine":
+                if assoc_type == "cosine":
                     adjacency[i, j] = P12 / np.sqrt(P1) / np.sqrt(P2)
-                elif link_type == "phi":
+                elif assoc_type == "phi":
                     adjacency[i, j] = (P12 - P1 * P2) / np.sqrt(P1) / np.sqrt(P2) / np.sqrt(1 - P1) / np.sqrt(1 - P2)
                 else:
-                    raise Exception(f"Link type '{link_type}' not understood.")
+                    raise Exception(f"Link type '{assoc_type}' not understood.")
 
     return adjacency + adjacency.T
 
 
-def compute_RR(X, P_abs, M, pval: float, corrected_pval: float, conf_intervals=True, verbose=False):
+def compute_RR(X, P_abs, M, conf_pval: float, signif_pval: float, conf_intervals=True, verbose=False):
     """
-    Compute the RR values, its confidence intervals, and significance according to Fisher's exact test.
-    As the significance test, we should be using
-    [Fisher's exact test](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.fisher_exact.html), as we
-    have many pairs of conditions with very few observations.
-    Fisher's exact test is computed using `scipy.stats.fisher_exact`
+    Compute the RR values, its confidence intervals, and significance according to
+    [Fisher's exact test](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.fisher_exact.html), useful
+    if pairs of conditions have very few observations. Fisher's exact test is computed using `scipy.stats.fisher_exact`
     (https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.fisher_exact.html).
-    :param pval: p-value for computing the 99% confidence intervals.
-    :param corrected_pval: p-value for computing significance with Fisher's exact test.
+
+    :param conf_pval: p-value for computing the 99% confidence intervals.
+    :param signif_pval: p-value for computing significance with Fisher's exact test.
     :return: RRs, fishers_signif, RRs_conf
     """
-    # Compute RR
     RRs = (X / P_abs[None, :] / P_abs[:, None] * M)
 
     if conf_intervals:
         # Compute confidence intervals (Katz method)
         sigmas = 1 / X - 1 / M + 1 / P_abs[None, :] / P_abs[:, None] - 1 / M ** 2
-        zs = sp.stats.norm.interval(1 - pval, loc=0, scale=1)
+        zs = sp.stats.norm.interval(1 - conf_pval, loc=0, scale=1)
         RRs_conf = RRs * np.exp(zs[0] * sigmas), RRs * np.exp(zs[1] * sigmas)
         assert (RRs_conf[0] > RRs).sum() == 0 and (RRs_conf[1] < RRs).sum() == 0
-        # self.RRs_signif = np.sign(self.RRs_conf[0] - 1) == np.sign(self.RRs_conf[1] - 1)
     else:
         RRs_conf = None
 
@@ -149,37 +164,20 @@ def compute_RR(X, P_abs, M, pval: float, corrected_pval: float, conf_intervals=T
         if n11 > 0 and n10 > 0 and n01 > 0 and n00 > 0:
             fishers[i, j] = sp.stats.fisher_exact([[n11, n01], [n10, n00]])[1]
             fishers[j, i] = fishers[i, j]
-    fishers_sig = fishers <= corrected_pval
+    fishers_sig = fishers <= signif_pval
     print(time.strftime("Fisher significance computed in %H hours, %M minutes, %S seconds.",
                         time.gmtime(time.time() - t0))) if verbose else None
 
     return RRs, fishers_sig, RRs_conf
 
-    # res = pd.DataFrame(
-    #     [{"i": i, "j": j, "namei": model.morb_names[i], "namej": model.morb_names[j],
-    #       "names": f"{model.morb_names[i]}-{model.morb_names[j]}",
-    #       "Xi": P_abs[i], "Xj": P_abs[j], "Xij": X[i, j], "Pi": P_abs[i] / M, "Pj": P_abs[j] / M, "Cij": X[i, j] / M,
-    #       "Pi|j": (Pij := X[i, j] / P_abs[j]), "Pj|i": (Pji := X[i, j] / P_abs[i]), "maxPi|j": max(Pij, Pji),
-    #       "namei+": f"{model.morb_names[i]}{P_abs[i]}", "namej+": f"{model.morb_names[j]}{P_abs[j]}",
-    #       "RR": RRs[i, j], "fisher_sig": fishers_sig[i, j]} for (i, j) in
-    #      itertools.combinations(range(len(model.morb_names)), 2)])
-    #
-    # res["RR_f"] = res["RR"].apply(lambda x: f"{x:.3}")
-    # res = res.set_index(res["names"])
-    #
-    # return RRs, res
 
-
-
-
-
-
-def identify_LTC(LTC: object, morb_cols: list) -> tuple:
+def identify_LTC(LTC, morb_cols: list) -> tuple:
     """
     Return the id and name of an LTC by providing one of the two and the list of all LTCs
+
     :param LTC: int or string
-    :param morb_cols: list of strings
-    :return: LTC_id, LTC_name
+    :param morb_cols: iterable of strings
+    :return: LTC_id (int), LTC_name (str)
     """
     LTC_dict = {name: i for i, name in enumerate(morb_cols)}
     if isinstance(LTC, (int, np.integer)):
@@ -191,7 +189,15 @@ def identify_LTC(LTC: object, morb_cols: list) -> tuple:
     return LTC_id, LTC_name
 
 
-def MLTC_count(df, columns):
+def MLTC_count(df: pd.DataFrame, columns: list) -> np.ndarray:
+    """
+    Returns the co-occurrence matrix of a dataframe for the given columns (LTCs), which must contain binary values. The
+    diagonal elements of the matrix contain the total counts in each column (LTC).
+
+    :param df: pandas.DataFrame in 'long-format', ie with rows as patients and columns as variables
+    :param columns: list of columns containing LTC information (values must be binary)
+    :return: X (np.ndarray), square matrix with co-occurrence counts in the off-diagonals and LTC counts in the diagonal
+    """
     long_mat = df[columns].values
     assert (valid := ((long_mat == 0) | (long_mat == 1))).all(), f"{(~valid).sum()} cells don't contain binary values."
     return np.matmul(long_mat.T, long_mat)
