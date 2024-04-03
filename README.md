@@ -64,4 +64,4 @@ Then, you can rerun the cells within the jupyter notebook `notebooks/results.ipy
 
 ## Acknowledgements
 
-Functions and notebooks were inspired by [this repository].
+Functions and notebooks were inspired by [this repository](https://github.com/jg-you/plant-pollinator-inference/tree/master).
