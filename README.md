@@ -48,14 +48,14 @@ results = model.get_results_dataframe(credible_inteval_pvalue=0.01)
 
 where `data` is a `pandas.DataFrame` object containing your dataset in **long format** --- i.e. with patients as rows, columns as variables, and binary values (diagnosis present / absent).
 
-For a more detailed introduction to using and understanding the model and obtaining outputs, see the tutorial notebook ['ABC_to_ABC.ipynb'](`notebooks/ABC_to_ABC.ipynb`).
+For a more detailed introduction to using and understanding the model and obtaining outputs, see the tutorial notebook ['ABC_to_ABC.ipynb'](notebooks/ABC_to_ABC.ipynb).
 
 
 ## Reproducing results
 
-You can replicate the results and figures from the article by running the notebook [`notebooks/results.ipynb`](`notebooks/results.ipynb`). However, note that this will only be possible if you have access to the dataset.
+You can replicate the results and figures from the article by running the notebook [`notebooks/results.ipynb`](notebooks/results.ipynb). However, note that this will only be possible if you have access to the dataset.
 
-You can still reproduce the results on a different dataset, for which you will need to adapt all functions and variables within the file [`lib/data.py`](`lib/data.py`) to your dataset characteristics and then rerun [`notebooks/results.ipynb`](`notebooks/results.ipynb`) --- or use the functions in the file [`lib/results.py`](`lib/results.py`).
+You can still reproduce the results on a different dataset, for which you will need to adapt all functions and variables within the file [`lib/data.py`](lib/data.py) to your dataset characteristics and then rerun [`notebooks/results.ipynb`](notebooks/results.ipynb) --- or use the functions in the file [`lib/results.py`](lib/results.py).
 
 
 ## Repository structure
