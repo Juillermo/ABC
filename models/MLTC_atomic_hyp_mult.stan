@@ -13,7 +13,6 @@ parameters {
   array[n,n] real<lower=-1, upper=upper_r> r;  // positive co-morbidity interactions
   
   // Lognormal prior for associations
-  real mu_lognormal_prior;
   real<lower=0> std_lognormal_prior;
   
   // Beta prior for sigma values
@@ -28,11 +27,9 @@ model {
     sigma[i] ~ beta(alpha_beta_prior, beta_beta_prior);
   }
   
-  mu_lognormal_prior ~ normal(0, 1);
   std_lognormal_prior ~ exponential(1);
   for (i in 1:n) {
     for (j in i + 1:n) {
-      // r[i,j] + 1 ~ lognormal(mu_lognormal_prior, std_lognormal_prior);
       r[i,j] + 1 ~ lognormal(0, std_lognormal_prior);
       
       // Likelihood
@@ -58,19 +55,14 @@ generated quantities {
     sigma_prior_post[i] = beta_rng(alpha_beta_prior, beta_beta_prior);
   }
   
-  real mu_prior = normal_rng(0, 1);
   real<lower=0> std_prior = exponential_rng(1);
   array[n,n] real r_priors;
-  array[n,n] real rate_X_prior;
-  array[n,n] real rate_X_post;
   
   array[n,n] int X_post;
   array[n,n] int P_post;
   for (i in 1:n){
     for (j in i + 1:n){
-      r_priors[i,j] = - 1 + lognormal_rng(mu_prior, std_prior);
-  
-      rate_X_prior[i,j] = sigma_priors[i] * sigma_priors[j] * (1 + r_priors[i,j] * (1 - sigma_priors[i] * sigma_priors[j]));
+      r_priors[i,j] = - 1 + lognormal_rng(0, std_prior);
 
       real mu_11 = sigma[i] * sigma[j] * (1 + r[i,j] * (1 - sigma[i] * sigma[j]));
       real mu_10 = sigma[i] * (1 - sigma[j]) * (1 - sigma[i] * sigma[j] * r[i,j]);
