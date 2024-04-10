@@ -1,6 +1,8 @@
 # Associations Beyond Chance
 
-This repository provides code linked to the paper [*"Multimorbidity analysis with low condition counts: a robust Bayesian approach for small but important subgroups"*](https://authors.elsevier.com/sd/article/S2352396424001166). If you use this code, please cite the paper.
+This repository provides code linked to the paper [*"Multimorbidity analysis with low condition counts: a robust Bayesian approach for small but important subgroups"*](https://authors.elsevier.com/sd/article/S2352396424001166). If you use this code, please cite the paper:
+
+> Romero Moreno G., Restocchi V., Fleuriot JD., Anand A., Mercer SW., Guthrie B. (2024). [*Multimorbidity analysis with low condition counts: a robust Bayesian approach for small but important subgroups*](https://www.sciencedirect.com/science/article/pii/S2352396424001166); **eBioMedicine**, Volume 102, 105081, ISSN 2352-3964, https://doi.org/10.1016/j.ebiom.2024.105081.
 
 ```
 @article{ROMEROMORENO2024105081,
@@ -16,27 +18,20 @@ author = {Guillermo {Romero Moreno} and Valerio Restocchi and Jacques D. Fleurio
 }
 ```
 
-While the code is in *python*, Bayesian inference is performed via [Stan](http://mc-stan.org) through the package `cmdstanpy`, providing a python API to the *Stan* library.
-
 ![](1-s2.0-S2352396424001166-gr4_lrg.jpg)
 
 
-## Packages
+## Installation and dependencies
 
-For running the model, you will need the following packages:
+While the code is in *python*, Bayesian inference is performed via [Stan](http://mc-stan.org) through the package `cmdstanpy` (version 1.1.0), providing a python API to the *Stan* library, although the model could work with [any stan interface](https://mc-stan.org/users/interfaces/index.html).
 
-- numpy = 1.22.3
-- scipy = 1.8.0
-- pandas = 1.4.2
-- cmdstanpy = 1.1.0 (pystan = 3.2.0)
-- matplotlib = 3.5.1
-- seaborn = 0.13.1
+To install all the required packages in a virtual environment, you can:
+- Install [Anaconda](https://docs.anaconda.com/) (if not already installed)
+- Execute `conda env create -n ABC --file packages.yml`* in a terminal for creating an environment called `ABC` with all the required packages. *Be aware that it may take a few GB of space.*
+- Activate the environment with `conda activate ABC`
+- Run the code or set up a jupyter notebook server (by running `jupyter notebook`) to run the notebooks
 
-
-For obtaining results, you will additionally need the following packages:
-
-- networkx = 2.8
-- bokeh = 3.3.0
+> .* Alternatively, you can execute `conda create -n ABC -c conda-forge numpy=1.22.3 scipy=1.8.0 pandas=1.4.2 matplotlib=3.5.1 seaborn=0.13.1 networkx=2.8 bokeh=3.3.0 cmdstanpy=1.1.0 jupyter`.
 
 
 ## Using the model
@@ -48,20 +43,35 @@ from lib.model import ABCModel
 
 model = ABCModel()
 model.load_fit(data, "a_name_for_the_saved_model", num_warmup=500, random_seed=1)
-results = model.get_results_dataframe(pvalue=0.01)
+results = model.get_results_dataframe(credible_inteval_pvalue=0.01)
 ```
 
 where `data` is a `pandas.DataFrame` object containing your dataset in **long format** --- i.e. with patients as rows, columns as variables, and binary values (diagnosis present / absent).
 
-The model is defined in the file `models/MLTC_atomic_hyp_mult.stan`.
+For a more detailed introduction to using and understanding the model and obtaining outputs, see the tutorial notebook ['ABC_to_ABC.ipynb'](`notebooks/ABC_to_ABC.ipynb`).
 
 
 ## Reproducing results
 
-If you want to reproduce the results and figures from the article, you will first need to go to `lib/data.py` and check and modify all functions and variables within that file to adapt them to your dataset characteristics.
-Then, you can rerun the cells within the jupyter notebook `notebooks/results.ipynb`, or use the functions in `lib/results.py`.
+You can replicate the results and figures from the article by running the notebook [`notebooks/results.ipynb`](`notebooks/results.ipynb`). However, note that this will only be possible if you have access to the dataset.
+
+You can still reproduce the results on a different dataset, for which you will need to adapt all functions and variables within the file [`lib/data.py`](`lib/data.py`) to your dataset characteristics and then rerun [`notebooks/results.ipynb`](`notebooks/results.ipynb`) --- or use the functions in the file [`lib/results.py`](`lib/results.py`).
+
+
+## Repository structure
+
+* [`lib/`](lib/): python files with the basic classes and functions.
+* [`models/`](models/): files defining *Stan* models.
+* [`output/`](output/): folder in which to save the fitted models.
+* [`notebooks/`](notebooks/): results and examples implementing our models and code.
+* [`figs/`](figs/): folder in which to save the figures produced in the notebooks.
 
 
 ## Acknowledgements
 
-Functions and notebooks were inspired by [this repository].
+Functions and notebooks were inspired by [this repository](https://github.com/jg-you/plant-pollinator-inference/tree/master).
+
+
+### Contact
+
+Any question, comment, or feedback, contact <Guillermo.RomeroMoreno@ed.ac.uk>, or submit an Issues on GitHub.
