@@ -29,27 +29,43 @@ You can install the package using `pip` or `conda`.*Be aware that the package an
 
 While the code is in *python*, Bayesian inference is performed via [Stan](http://mc-stan.org) through the python API `cmdstanpy` (version 1.1.0). However, the model (defined in the file [`ABC/models/MLTC_atomic_hyp_mult.stan`](ABC/models/MLTC_atomic_hyp_mult.stan)) could also work with [any other stan interface](https://mc-stan.org/users/interfaces/index.html).
 
-### Installation with `pip`
+### Installation with `pip` (for running the method from the command line)
 
-For installing the package with `pip`, you just will just need to:
+For installing [the PyPI package](https://pypi.org/project/abc-network/) with `pip`, you just will just need to:
 1. Run `python -m pip install abc_network` on the terminal to install the package
-2. Run `install_cmdstan` (Linux/MacOSX) or `install_cmdstan --compiler` (Windows) to install *Stan*, the Bayesian inference library
+2. Run `install_cmdstan` (Linux/MacOSX) or `install_cmdstan --compiler` (Windows) on the terminal to install *Stan*, the Bayesian inference library. For more info check their [documentation](https://mc-stan.org/cmdstanpy/installation.html#function-install-cmdstan).
 
 
-### Installation with `conda`
+### Installation with `conda` (for running jupyter notebooks or reproducing results)
 
-- Install [Anaconda](https://docs.anaconda.com/) (if not already installed)  
-- Execute `conda env create -n ABC --file packages.yml`[^1] in a terminal for creating an environment called `ABC` with all the required packages.
-- Activate the environment with `conda activate ABC`, and run the code or set up a jupyter notebook server (by running `jupyter notebook`)
+- Install [Anaconda](https://docs.anaconda.com/) (if not already installed)
+- Download the code of the [GitHub repository](https://github.com/Juillermo/ABC)
+- At the root folder of the repository, execute `conda env create -n ABC --file packages.yml`[^1] for creating an environment called `ABC` with all the required packages
+- Activate the environment with `conda activate ABC`. You can then run the python scripts directly or set up a jupyter notebook server (by running `jupyter notebook`)
 
 [^1]: Or directly execute `conda create -n ABC -c conda-forge numpy=1.22.3 scipy=1.8.0 pandas=1.4.2 matplotlib=3.5.1 seaborn=0.13.1 networkx=2.8 bokeh=3.3.0 cmdstanpy=1.1.0 jupyter`.
 
 
 ## Using the model
 
-Our model can be used simply by running `ABC "path/to/dataset_file.csv"`, which will fit the model and generate output files with the results. For more information on additional argumnets, run `ABC --help`.
+You can use our model either directly from the command line --- without the need of diving into python code --- or integrate it into your python scripts. 
 
-Additionally, you can integrate our model into other *python* code directly. You can see an example snippet on how to do so below.
+
+### Command line
+
+If you installed the package through *PyPI*, our model can be used simply by running `ABC "path/to/dataset_file.csv"`, which will fit the model and generate an output folder `output` at the folder where the command is run, including the saved fitted model and files with the results. For more information on additional arguments that this command can take, just execute `ABC --help`.
+
+Note that the *csv* file containing your dataset must:
+- be in **long format** (i.e. patients as rows and conditions as columns), 
+- only have the columns of interest, which must only have BINARY VALUES, and
+- have the first row with the name of the columns and the first column with the row index
+
+If you installed the package through *conda*, once you have activated the conda environment you can run `python3 ABC/model.py --data_path "path/to/dataset_file.csv"` for exactly the same functionality.
+
+
+### Integration to python scripts
+
+You can also integrate our model into other *python* code directly. You can see an example snippet on how to do so below.
 
 ```python
 from ABC.model import ABCModel
@@ -68,7 +84,7 @@ ABC = model.get_associations()  # This retrieves the whole distribution for all 
 results = model.get_results_dataframe(credible_inteval_pvalue=0.01)  # This creates a table with summary statistics
 ```
 
-A detailed example with **step-by-step intructions** on how to use the model and produce outputs and visualisations within python code can be found at the tutorial notebook ['ABC_to_ABC.ipynb'](notebooks/ABC_to_ABC.ipynb).
+A more detailed example with **step-by-step intructions** on how to use the model and produce outputs and visualisations within python code can be found at the tutorial notebook ['ABC_to_ABC.ipynb'](notebooks/ABC_to_ABC.ipynb).
 
 
 ## Reproducing results
