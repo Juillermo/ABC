@@ -16,8 +16,8 @@ from bokeh.models import Range1d, Circle, ColumnDataSource, MultiLine, EdgesAndL
 from bokeh.palettes import Spectral8
 from bokeh.plotting import figure, from_networkx
 
-from lib.data import beautify_index, stratify_dataset
-from lib.model import MLTCModel
+from ABC.data import beautify_index, stratify_dataset
+from ABC.model import MLTCModel
 
 
 def fit_model(data: pd.DataFrame, strat_var: str, index, model_class: MLTCModel, num_warmup: int = 500,
@@ -177,7 +177,7 @@ def plot_ABC_vs_RR(ax: plt.Axes, dat: pd.DataFrame, ABC_type: str = "ABC", RR_co
     sm.set_array([])
     if ax.get_legend() is not None:
         ax.get_legend().remove()
-    plt.colorbar(sm, label="Prevalence of condition, $P_i$") if colorbar else None
+    plt.colorbar(sm, label="Prevalence of condition, $P_i$", ax=ax) if colorbar else None
     ax.set(
         ylabel=f"Our association measure, $ABC_{{ij}}$"
                f"{((',' if a_conf else ', NOT') + ' significant') if a_conf is not None else ''}",
@@ -243,6 +243,9 @@ def build_network(multimorbidity_df: pd.DataFrame, var: str, cutoff=0, all_condi
     # Basic network data
     network_df = multimorbidity_df[multimorbidity_df["a_sig" if var == "ABC" else "fisher_sig"]] if var in (
         "ABC", "RR") else multimorbidity_df
+    if "i_abs" not in network_df.columns or "j_abs" not in network_df.columns:
+        network_df.loc[:, "i_abs"] = network_df.loc[:, "i"]
+        network_df.loc[:, "j_abs"] = network_df.loc[:, "j"]
     network_df = network_df.loc[:, ["i_abs", "j_abs", var, "i", "j", "Cij", "Pi", "Pj"]]
 
     # Filter network data by cutoff
@@ -250,7 +253,7 @@ def build_network(multimorbidity_df: pd.DataFrame, var: str, cutoff=0, all_condi
           f"{len(pd.concat([network_df['i_abs'], network_df['j_abs']]).unique())} nodes", end=", ")
     network_df = network_df[np.abs(np.log(network_df[var])) > cutoff]
     print(f"filtered size: {len(network_df)} edges, "
-          f"{len(pd.concat([network_df['i_abs'], network_df['j_abs']]).unique())} nodes.")
+          f"{len(pd.concat([network_df['i_abs'], network_df['j_abs']]).unique())} nodes.") if cutoff != 0 else None
 
     # Build network
     network = nx.from_pandas_edgelist(network_df, source='i_abs', target='j_abs', edge_attr=[var])
@@ -354,7 +357,7 @@ def plot_network(network: nx.Graph, network_df: pd.DataFrame, var: str, title: s
     # Add Labels
     x, y = zip(*network_graph.layout_provider.graph_layout.values())
     node_labels = [beautify_name_func(attrs["name"], sep=("\n" if layout == nx.circular_layout else " ")) for _, attrs
-                   in list(network.nodes(data=True))],
+                   in list(network.nodes(data=True))]
     source = ColumnDataSource(dict(x=x, y=y, name=node_labels, **(
         {} if layout != nx.circular_layout else dict(x_offset=-20 + 3 * np.array(x), y_offset=-10 + 3 * np.array(y)))))
     labels_kwargs = {} if layout != nx.circular_layout else dict(x_offset="x_offset", y_offset="y_offset")
@@ -379,8 +382,8 @@ if __name__ == '__main__':
 
         cmdstanpy.show_versions()
 
-    from lib.data import load_dataset
-    from lib.model import ABCModel
+    from ABC.data import load_dataset
+    from ABC.model import ABCModel
 
     # M = 4e4
     dfo, names = load_dataset()  # , nrows=M)

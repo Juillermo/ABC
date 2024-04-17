@@ -25,17 +25,25 @@ author = {Guillermo {Romero Moreno} and Valerio Restocchi and Jacques D. Fleurio
 
 ## Installation and dependencies
 
-You can install and use the package just by running `python setup.py install`. (It is recommended to perform the installation in a python virtual environment.)
+You can install the package using `pip` or `conda`.*Be aware that the package and all its dependencies may take a few GB of space.*
 
-Or alternatively:
+While the code is in *python*, Bayesian inference is performed via [Stan](http://mc-stan.org) through the python API `cmdstanpy` (version 1.1.0). However, the model (defined in the file [`ABC/models/MLTC_atomic_hyp_mult.stan`](ABC/models/MLTC_atomic_hyp_mult.stan)) could also work with [any other stan interface](https://mc-stan.org/users/interfaces/index.html).
+
+### Installation with `pip`
+
+For installing the package with `pip`, you just will just need to:
+1. Run `python -m pip install abc_network` on the terminal to install the package
+2. Run `install_cmdstan` (Linux/MacOSX) or `install_cmdstan --compiler` (Windows) to install *Stan*, the Bayesian inference library
+
+
+### Installation with `conda`
 
 - Install [Anaconda](https://docs.anaconda.com/) (if not already installed)  
-- Execute `conda env create -n ABC --file packages.yml`* in a terminal for creating an environment called `ABC` with all the required packages. *Be aware that it may take a few GB of space.*
+- Execute `conda env create -n ABC --file packages.yml`[^1] in a terminal for creating an environment called `ABC` with all the required packages.
 - Activate the environment with `conda activate ABC`, and run the code or set up a jupyter notebook server (by running `jupyter notebook`)
 
-> .* Or you can directly execute `conda create -n ABC -c conda-forge numpy=1.22.3 scipy=1.8.0 pandas=1.4.2 matplotlib=3.5.1 seaborn=0.13.1 networkx=2.8 bokeh=3.3.0 cmdstanpy=1.1.0 jupyter`.
+[^1]: Or directly execute `conda create -n ABC -c conda-forge numpy=1.22.3 scipy=1.8.0 pandas=1.4.2 matplotlib=3.5.1 seaborn=0.13.1 networkx=2.8 bokeh=3.3.0 cmdstanpy=1.1.0 jupyter`.
 
-While the code is in *python*, Bayesian inference is performed via [Stan](http://mc-stan.org) through the package `cmdstanpy` (version 1.1.0), providing a python API to the *Stan* library. The model (defined in the file [`models/MLTC_atomic_hyp_mult.stan`](models/MLTC_atomic_hyp_mult.stan)) could also work with [any stan interface](https://mc-stan.org/users/interfaces/index.html).
 
 ## Using the model
 
@@ -73,8 +81,8 @@ You can still reproduce the results shown in that notebook on a different datase
 ## Repository structure
 
 * [`ABC/`](ABC/): python files with the basic classes and functions.
-* [`models/`](models/): files defining *Stan* models.
-* [`output/`](output/): folder in which to save the fitted models.
+* [`ABC/models/`](ABC/models/): files defining *Stan* models.
+* [`ABC/output/`](ABC/output/): folder in which to save the fitted models.
 * [`notebooks/`](notebooks/): results and examples implementing our models and code.
 * [`figs/`](figs/): folder in which to save the figures produced in the notebooks.
 

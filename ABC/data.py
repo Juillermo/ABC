@@ -12,7 +12,7 @@ import re
 import numpy as np
 import pandas as pd
 
-from lib.utils import PROJECT_DIR
+from ABC.utils import PROJECT_DIR
 
 DATA_PATH = osp.abspath(osp.join(PROJECT_DIR, 'PCCIU/processed_data/clean_PCCIU_Multimorbidity.tsv'))
 
@@ -142,7 +142,7 @@ def beautify_index(table: pd.DataFrame, **beautify_name_kwargs) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    from lib.utils import MLTC_count
+    from ABC.utils import MLTC_count
 
     df, names = load_dataset(nrows=1e5)
     adj = np.array(MLTC_count(df, names), dtype=int)

@@ -16,8 +16,8 @@ import scipy as sp
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-THIS_DIR = osp.dirname(osp.realpath(__file__))
-PROJECT_DIR = osp.abspath(osp.join(THIS_DIR, os.pardir))
+PACKAGE_DIR = osp.dirname(osp.realpath(__file__))
+PROJECT_DIR = osp.abspath(osp.join(PACKAGE_DIR, os.pardir))
 
 
 def plot_pairwise_relations(mat, names, title="", cbar_label="", sym=False, ax: plt.Axes = None, row: int = None,
@@ -201,3 +201,4 @@ def MLTC_count(df: pd.DataFrame, columns: list) -> np.ndarray:
     long_mat = df[columns].values
     assert (valid := ((long_mat == 0) | (long_mat == 1))).all(), f"{(~valid).sum()} cells don't contain binary values."
     return np.matmul(long_mat.T, long_mat)
+

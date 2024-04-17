@@ -10,11 +10,13 @@ Author:
 Guillermo Romero Moreno <Guillermo.RomeroMoreno@ed.ac.uk>
 """
 
+import os
 import os.path as osp
 import io
 import warnings
 import itertools
 import time
+import argparse
 
 # External packages
 import numpy as np
@@ -25,10 +27,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Own packages
-from lib.utils import plot_pairwise_relations, identify_LTC, MLTC_count, PROJECT_DIR, compute_RR
+from ABC.utils import plot_pairwise_relations, identify_LTC, MLTC_count, compute_RR, PACKAGE_DIR
 
-MODELS_PATH = osp.abspath(osp.join(PROJECT_DIR, 'models'))  # directory from which to load model specifications
+MODELS_PATH = osp.abspath(osp.join(PACKAGE_DIR, 'models'))  # directory from which to load model specifications
 FIT_MODELS_PATH = "output"  # directory to which to save the parameters of fit models
+os.makedirs(FIT_MODELS_PATH, exist_ok=True)  # create the directory if it doesn't exist
 
 
 def find_mode_data_groups(samples, window_width=0.01) -> tuple:
@@ -105,6 +108,10 @@ class MLTCModel:
             self.model_code = f.read()
             print(self.model_code) if verbose else None
 
+        self.association_df = None
+        self.LTC_df = None
+        self.sorted_prev_mapping = None
+
         # Data-related variables
         self.df = None
         self.X = None  # Co-occurrence matrix
@@ -127,17 +134,19 @@ class MLTCModel:
         """
         return f"_{self.model_name}_wu{num_warmup}"
 
-    def load_fit(self, df: pd.DataFrame, fname: str, column_names, **sample_kwargs) -> bool:
+    def load_fit(self, df: pd.DataFrame, fname: str, column_names=None, **sample_kwargs) -> bool:
         """
         Load data from a fitted model. If previous fitted data does not exist, fit a new model (and return False).
 
         :param df: pandas DataFrame with the data (in long format, i.e. patients as rows, health conditions as columns,
         and binary values)
         :param fname: name of the file to load the model from or save the model to
-        :param column_names: list of names of columns related to health conditions
+        :param column_names: list of names of columns related to health conditions. If not given, it will take all
+        columns from the dataset at `df`.
         :param sample_kwargs: kwargs for the sampling function in *Stan*.
         :return: (bool) whether the model was loaded from a previous file (True) or a new model was trained (False)
         """
+        column_names = column_names if column_names is not None else df.columns
         X, self.morb_names = MLTC_count(df, column_names), column_names
 
         # Remove rows that have zero co-occurrence cases with any other rows
@@ -180,7 +189,6 @@ class MLTCModel:
             print(f"Model '{fpath}' not found, fitting new model...")
             self._fit_data(**sample_kwargs)
             self.save_fit(fname)
-            self.load_fit(df, fname, column_names) if self.stan_api == "pystan" else None
             return False
 
     def _fit_data(self, num_chains: int, num_warmup: int, num_samples: int, random_seed: int = None,
@@ -524,11 +532,6 @@ class ABCModel(MLTCModel):
         """
         super(ABCModel, self).__init__(model_name, stan_api, verbose=verbose)
 
-        self.model_name = model_name
-        with io.open(osp.join(MODELS_PATH, model_name + '.stan'), 'rt', encoding='utf-8') as f:
-            self.model_code = f.read()
-            print(self.model_code) if verbose else None
-
         self.RRs, self.RRs_conf, self.fishers_sig = None, None, None
         self.assoc_mode, self.assoc_credible_int, self.assoc_pvalues, self.assoc_signif = None, None, None, None
 
@@ -586,6 +589,29 @@ class ABCModel(MLTCModel):
                                    data=LTC_data).sort_values("Counts", ascending=False)
         return self.LTC_df
 
+    def get_associations(self, **get_var_kwargs) -> np.ndarray:
+        """
+        Get the basic association statistics for associations, such as the mean, median, mode, credible intervals, and
+        significance. It accepts the same arguments as `_get_var`.
+
+        :return: array with association distributions of size N x N x S, or N x S (if 'LTC1' is given as argument) or
+        S (if 'LTC2' is given as argument), where S is the number of samples drawn from the MCMC process.
+        """
+        assoc_values = self._get_var("r", **get_var_kwargs)
+
+        # Clean 'rubbish' values
+        if "LTC1" not in get_var_kwargs or get_var_kwargs["LTC1"] is None:  # i.e. all associations are retrieved
+            triu = np.triu_indices(n=len(self.morb_names), k=1)
+            if self.stan_api == "pystan":
+                assoc_values[triu[1], triu[0]] = assoc_values[triu]
+            elif self.stan_api == "cmdstanpy":
+                assoc_values[triu] = assoc_values[triu[1], triu[0]]
+                assoc_values[np.diag_indices(n=len(self.morb_names))] = np.NaN
+            else:
+                raise Exception(f"Stan API '{self.stan_api}' not understood.")
+
+        return assoc_values
+
     def get_assoc_stats(self, credible_inteval_pvalue, significance_pvalue):
         """
         Get the basic association statistics for associations, such as the mean, median, mode, credible intervals, and
@@ -599,16 +625,7 @@ class ABCModel(MLTCModel):
         def compute_num_interval(samples, pvalue):
             return [np.percentile(samples, 100 * q, axis=-1) for q in (pvalue / 2, 1 - pvalue / 2)]
 
-        triu = np.triu_indices(n=len(self.morb_names), k=1)
-        assoc_values = self._get_var("r")
-        if self.stan_api == "pystan":
-            assoc_values[triu[1], triu[0]] = assoc_values[triu]
-        elif self.stan_api == "cmdstanpy":
-            assoc_values[triu] = assoc_values[triu[1], triu[0]]
-            assoc_values[np.diag_indices(n=len(self.morb_names))] = np.NaN
-        else:
-            raise Exception(f"Stan API '{self.stan_api}' not understood.")
-
+        assoc_values = self.get_associations()
         assoc_mean, assoc_median = assoc_values.mean(axis=-1), np.median(assoc_values, axis=-1)
         self.assoc_credible_int = compute_num_interval(assoc_values, credible_inteval_pvalue)
 
@@ -623,6 +640,7 @@ class ABCModel(MLTCModel):
         for i, j in itertools.combinations(range(len(assoc_values)), 2):
             mode_range = find_mode_data_groups(assoc_values[i, j])
             self.assoc_mode[i, j] = (mode_range[0] + mode_range[1]) / 2
+        triu = np.triu_indices(n=len(self.morb_names), k=1)
         self.assoc_mode[triu[1], triu[0]] = self.assoc_mode[triu]
         print(time.strftime("Elapsed time (computing modes): %H hours, %M minutes, %S seconds.",
                             time.gmtime(time.time() - t_ini)))
@@ -759,9 +777,14 @@ class ABCModel(MLTCModel):
             if i == j:
                 assoc_vals[:, i, j] = 0
             elif i > j:
-                assoc_vals[:, i, j] = assoc_vals[:, j, i]
+                if self.stan_api == "cmdstanpy":
+                    assoc_vals[:, j, i] = assoc_vals[:, i, j]
+                elif self.stan_api == "pystan":
+                    assoc_vals[:, i, j] = assoc_vals[:, j, i]
+                else:
+                    raise Exception(f"Stan API '{self.stan_api}' not recognized.")
 
-        n_plots = 5
+        n_plots = 7
         figsize = 3 * n_plots
         fig, axes = plt.subplots(n_plots, n_plots, figsize=(figsize, figsize))
 
@@ -771,11 +794,12 @@ class ABCModel(MLTCModel):
                 for k in range(self.num_chains if separate_chains or n_chains is not None else 1):
                     sns.distplot(sigmas[k, i], kde=False, bins=15, ax=ax, label=str(k), hist_kws={'alpha': 1 / 2})
             elif i > j:  # associations
+                null = 1
                 for k in range(self.num_chains if separate_chains else 1):
-                    sns.distplot(assoc_vals[k, i, j], kde=False, hist_kws={'alpha': 1 / 2}, bins=15, ax=ax,
+                    sns.distplot(null + assoc_vals[k, i, j], kde=False, hist_kws={'alpha': 1 / 2}, bins=15, ax=ax,
                                  label=str(k))
                 # ax.axvline(self.RRs[j, i] - 1, color="grey", label="RR - 1")
-                ax.axvline(0, color="green", label="no association")
+                ax.axvline(null, color="green", label="no association")
                 ax.text(0.8, 0.8, f"P0={self.P_abs[i]}\nP1={self.P_abs[j]}\nX={self.X[j, i]}", transform=ax.transAxes,
                         ha="center", va="center")
 
@@ -877,7 +901,8 @@ class ABCModel(MLTCModel):
                             ax.axvline(LTC_i + 0.5), ax.axhline(N - LTC_i - 1.5)
                             break
 
-        plot_pairwise_relations(vals, sorted_labels, ax=ax, title=f"{var}" if title is None else title, sym=True, log=log,
+        plot_pairwise_relations(vals, sorted_labels, ax=ax, title=f"{var}" if title is None else title, sym=True,
+                                log=log,
                                 vmin=1 / max_val, vmax=max_val, bubbles=bubbles,
                                 **plot_comorbidities_kwargs)
 
@@ -1013,17 +1038,17 @@ class ABCModel(MLTCModel):
 
     def plot_priors(self, **var_kwargs):
         """
-        Plot the distributions of the prior parameters.
+        Plot the distributions of the fitted prior parameters.
 
         :param **var_kwargs: keyword arguments for the `_get_var` method.
         """
-        mus = self._get_var('mu_lognormal_prior', **var_kwargs)
+        # mus = self._get_var('mu_lognormal_prior', **var_kwargs)
         stds = self._get_var('std_lognormal_prior', **var_kwargs)
         alphas = self._get_var('alpha_beta_prior', **var_kwargs)
         betas = self._get_var('beta_beta_prior', **var_kwargs)
 
         fig, axes = plt.subplots(2, 2)
-        axes[0, 0].hist(mus.T, histtype="stepfilled", alpha=0.5), axes[0, 0].set(ylabel="mu")
+        # axes[0, 0].hist(mus.T, histtype="stepfilled", alpha=0.5), axes[0, 0].set(ylabel="mu")
         axes[0, 1].hist(stds.T, histtype="stepfilled", alpha=0.5), axes[0, 1].set(ylabel="std")
         axes[1, 0].hist(alphas.T, histtype="stepfilled", alpha=0.5), axes[1, 0].set(ylabel="alpha")
         axes[1, 1].hist(betas.T, histtype="stepfilled", alpha=0.5), axes[1, 1].set(ylabel="beta")
@@ -1094,7 +1119,7 @@ class ABCModel(MLTCModel):
         ax = axes[0]
         hist_kwg = dict(kde=True if not log_scale else False, log_scale=log_scale, bins=bins, ax=ax)
         ABCij = self._get_var("r", separate_chains=separate_chains if not prior else False, LTC1=LTC1, LTC2=LTC2,
-                             **var_kwargs)
+                              **var_kwargs)
         ABC_lim = ABCij[np.logical_and(ABCij >= xlim[0], ABCij <= xlim[1])] if xlim is not None else ABCij
 
         log_add = 1 if log_scale else 0
@@ -1175,3 +1200,47 @@ class ABCModel(MLTCModel):
             return m, std, True
         else:
             return None, None, False
+
+
+def main():
+    from datetime import datetime
+
+    parser = argparse.ArgumentParser(description='''Infer ABC model from a dataset file. The datafile must be in *long 
+format* (i.e. patients as rows and conditions as columns), with first row as columns names, first column as index, and 
+all other columns containing binary values only.
+
+An example use would be: `ABC path/to/dataset.csv`''')
+
+    # Required arguments
+    parser.add_argument('data_path', metavar='data_path', type=str,
+                        help="Path (absolute or relative) to the dataset file.")
+
+    # Optional arguments
+    parser.add_argument('--model_name', metavar='model_name', type=str, default="",
+                        help="Name of the saved model. If not given, an automatic name will be generated.")
+    parser.add_argument('--num_warmup', metavar='num_warmup', type=int, default=200,
+                        help="Number of samples discarded as 'warmup' of the MCMC process.")
+    parser.add_argument('--num_samples', metavar='num_warmup', type=int, default=1000,
+                        help="Number of samples given as a result of the MCMC process.")
+    parser.add_argument('--pvalue', metavar='pval', type=float, default=0.05,
+                        help="P-value for determining whether an association is significant.")
+
+    args = parser.parse_args()
+
+    data = pd.read_csv(args.data_path, index_col=0)
+    fname = args.model_name if args.model_name != "" else datetime.now().strftime("%Y-%m-%d-%H_%M_%S")
+
+    model = ABCModel()
+    model.load_fit(data, fname, num_warmup=args.num_warmup, num_samples=args.num_samples, random_seed=1)
+
+    ABC = model.get_associations()
+    np.save(ABC_file := f"{FIT_MODELS_PATH}/ABC-{fname}.npy", ABC)
+    results = model.get_results_dataframe(credible_inteval_pvalue=args.pvalue)
+    results.to_csv(results_file := f"{FIT_MODELS_PATH}/results-{fname}.csv")
+
+    print(f"Results have been saved into files '{ABC_file}' and '{results_file}'.")
+
+
+if __name__ == "__main__":
+    main()
+
