@@ -110,4 +110,4 @@ Functions and notebooks were inspired by [this repository](https://github.com/jg
 
 ### Contact
 
-Any question, comment, or feedback, contact <Guillermo.RomeroMoreno@ed.ac.uk>, or submit an Issues on GitHub.
+The code has not been extensively tested in other platforms, so if you encounter any error, submit an [Issue on GitHub](https://github.com/Juillermo/ABC/issues) or my email <Guillermo.RomeroMoreno@ed.ac.uk>. Feel free to raise an Issue or contact me likewise if you any question, comment, or feedback; these will be highly appreciated.
