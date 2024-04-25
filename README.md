@@ -1,3 +1,5 @@
+![ABC logo](logo.jpg)
+
 # Associations Beyond Chance (ABC)
 
 The ABC model provides a **Bayesian framework to infer multimorbidity associations between health conditions** from Electronic Health Records. The outputs are posterior distribution over pairwise association values, which can be assembled and visualised as multimorbidity weigthed network.
