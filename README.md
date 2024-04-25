@@ -109,6 +109,8 @@ You can still reproduce the results shown in that notebook on a different datase
 
 Functions and notebooks were inspired by [this repository](https://github.com/jg-you/plant-pollinator-inference/tree/master).
 
+The logo has been designed by Paola Galdi (@paola-g).
+
 
 ### Contact
 
