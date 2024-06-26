@@ -2,7 +2,7 @@
 
 # Associations Beyond Chance (ABC)
 
-The ABC model provides a **Bayesian framework to infer multimorbidity associations between health conditions** from Electronic Health Records. The outputs are posterior distribution over pairwise association values, which can be assembled and visualised as multimorbidity weigthed network.
+The ABC model provides a **Bayesian framework to infer multimorbidity associations between health conditions** from Electronic Health Records. The outputs are posterior distribution over pairwise association values, which can be assembled and visualised as multimorbidity weigthed network. This repository has associated the Python PyPI package [*abc-network*](https://pypi.org/project/abc-network/).
 
 The ABC model was presented on the article [*"Multimorbidity analysis with low condition counts: a robust Bayesian approach for small but important subgroups"*](https://authors.elsevier.com/sd/article/S2352396424001166). This repository also provides code to reproduce the experiments and visualisations there. If you use this code, please cite the paper:
 
